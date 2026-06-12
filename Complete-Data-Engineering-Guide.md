@@ -127,25 +127,26 @@ When dealing with JSON files, you often have nested fields (arrays within object
 You don't always ingest simple files. Often you need data directly from highly managed enterprise systems (Salesforce, Workday, PostgreSQL, SQL Server).
 Lakeflow Connect provides **Managed Connectors**. Rather than writing Python scripts with usernames and passwords to query Salesforce APIs, you provide the credentials securely via **Unity Catalog**, and Databricks manages an Ingestion Gateway that reliably mirrors the database directly into Streaming Delta Tables.
 
-#### 5. Ingesting into Existing Delta Tables (Merge Into)
-Once data lands, sometimes you need to apply updates to an existing master table without dropping the old one. We use `MERGE INTO`, which lets us **upsert** (Update if existing, Insert if new).
-
-**Technical Syntax:**
-```sql
-MERGE INTO main_users_target AS target Lakeflow Connect provides **Managed Connectors** for this.
-
-Rather than writing Python scripts with usernames and passwords to query Salesforce APIs, you provide the credentials securely via **Unity Catalog**, and Databricks manages an Ingestion Gateway that reliably mirrors the database directly into Streaming Delta Tables.
-
 ![Enterprise Ingestion Diagram](Data-Ingestion-with-Lakeflow-Connect-Ingesting-Enterprise-Data-Overview-06-12-2026_11_12_AM.png)
 
 #### 5. Ingesting into Existing Delta Tables (Merge Into)
-Once data lands, sometimes you need to apply updates to an existing master table without dropping the old one. We use `MERGE INTO`, which lets us **upsert** (Update if existing, Insert if new) and even handle deletes. This is the backbone of Change Data Capture (CDC) patterns.
+Once data lands, sometimes you need to apply updates to an existing master table without dropping the old one. We use `MERGE INTO`, which lets us **upsert** (Update if existing, Insert if new).
+
+This is the backbone of Change Data Capture (CDC) patterns.
 
 ![Merge into screenshot](example%20for%20ingesting%20in%20exisiting%20delta%20tables%20using%20merge%20into.png)
+
+**Technical Syntax:**
+```sql
+MERGE INTO main_users_target AS target
+USING source_updates AS source
+ON target.id = source.id
+WHEN MATCHED AND source.is_deleted = true THEN
+  DELETE
+WHEN MATCHED THEN
+  UPDATE SET
     target.email = source.email,
     target.status = source.status
-WHEN MATCHED AND source.status = 'delete' THEN
-  DELETE
 WHEN NOT MATCHED THEN
   INSERT (id, first_name, email, sign_up_date, status)
   VALUES (source.id, source.first_name, source.email, source.sign_up_date, source.status);
