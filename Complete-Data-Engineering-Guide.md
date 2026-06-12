@@ -63,10 +63,10 @@ Now let's get into the technical mechanics. Depending on the speed and shape of 
 #### 1. Data Ingestion from Cloud Storage
 This is the most common starting point. Files land in cloud storage, and Databricks ingests them.
 
-![Cloud storage ingestion screenshot](Data-Ingestion-with-Lakeflow-Connect-Introduction-to-Data-Ingestion-from-Cloud-Storage-06-12-2026_11_01_AM.png)
-
 **A. CREATE TABLE AS (CTAS) - Batch Load**
 Best for quick, one-time bulk loads. It creates and populates a Delta table from files in a single step.
+
+![Cloud storage ingestion screenshot](Data-Ingestion-with-Lakeflow-Connect-Introduction-to-Data-Ingestion-from-Cloud-Storage-06-12-2026_11_01_AM.png)
 
 ```sql
 -- Create a new table directly from a set of files
@@ -82,6 +82,9 @@ FROM read_files(
 
 **B. COPY INTO**
 Best for incremental batch loads. It is *idempotent* (rerunning it won't create duplicates) and keeps track of which files it has already ingested, skipping them on future runs to save money and time.
+
+![copy into screenshot](Data-Ingestion-with-Lakeflow-Connect-Introduction-to-Data-Ingestion-from-Cloud-Storage-06-12-2026_11_03_AM.png)
+
 ```sql
 -- First, create an empty table
 CREATE TABLE catalog.schema.target_table (
@@ -99,6 +102,10 @@ COPY_OPTIONS ('force' = 'false'); -- 'false' ensures we don't re-process files
 
 **C. Auto Loader - Streaming / High-Volume**
 The most powerful and scalable method for files. It uses cloud notification services to efficiently discover new files as they arrive and can handle schema evolution automatically.
+
+![Cloud storage ingestion auto loader screenshot](Data-Ingestion-with-Lakeflow-Connect-Introduction-to-Data-Ingestion-from-Cloud-Storage-06-12-2026_11_05_AM.png)
+
+
 ```python
 # Python example for a streaming read with Auto Loader
 (spark.readStream
