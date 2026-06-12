@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-width=1.0">
+    <title>The Databricks Playbook</title>
+    
+    <!-- Marked.js for parsing Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- Mermaid.js for rendering flowcharts -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    
+    <!-- html2pdf for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #005571; /* Databricks-style blue */
+            --secondary: #FF6600; /* Databricks-style orange */
+            --bg-color: #f8f9fa;
+            --text-color: #333333;
+            --code-bg: #272822;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.7;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .controls {
+            width: 100%;
+            background: #ffffff;
+            padding: 15px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            text-align: center;
+        }
+
+        .btn-download {
+            background-color: var(--secondary);
+            color: #ffffff;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(255, 102, 0, 0.3);
+            transition: background-color 0.3s, transform 0.1s;
+        }
+
+        .btn-download:hover {
+            background-color: #e65c00;
+            transform: translateY(-1px);
+        }
+
+        .book-container {
+            width: 100%;
+            max-width: 850px;
+            background: #ffffff;
+            margin: 30px auto;
+            padding: 50px 60px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4 {
+            color: var(--primary);
+            margin-top: 1.5em;
+        }
+
+        h1 {
+            font-size: 2em;
+            text-align: center;
+            border-bottom: 3px solid var(--secondary);
+            padding-bottom: 15px;
+            margin-bottom: 40px;
+        }
+
+        h2 {
+            font-size: 1.8em;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+
+        /* Elements */
+        p { margin-bottom: 1.2em; }
+        
+        strong { color: #111; }
+        
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 25px auto;
+            border-radius: 6px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+        }
+
+        /* Code Blocks */
+        code {
+            background-color: #f1f3f5;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+            color: #d63384;
+        }
+
+        pre {
+            background-color: var(--code-bg);
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+            margin: 20px 0;
+        }
+
+        pre code {
+            background: none;
+            color: #f8f8f2;
+            padding: 0;
+            font-size: 0.9em;
+        }
+
+        /* Mermaid Wrapper */
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            margin: 30px 0;
+        }
+
+        /* Print/PDF adjustments */
+        @media print {
+            body { background: white; }
+            .controls { display: none; }
+            .book-container { box-shadow: none; margin: 0; padding: 0; width: 100%; max-width: none; }
+            pre { background-color: #f4f4f4; border: 1px solid #ddd; box-shadow: none;}
+            pre code { color: #333; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <button class="btn-download" onclick="generatePDF()">📥 Download Guide as PDF</button>
+    </div>
+
+    <div class="book-container" id="content">
+        <!-- Content will be injected here -->
+        <div style="text-align: center; color: #888;">
+            <h2>Loading your guidebook...</h2>
+            <p>If this message doesn't disappear, ensure you are running this file via a local server (like the "Live Server" VS Code extension) so it can fetch the markdown file.</p>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Mermaid diagrams
+        mermaid.initialize({ startOnLoad: false, theme: 'default' });
+
+        async function renderMarkdown() {
+            try {
+                // Fetch the Markdown file
+                const response = await fetch('Complete-Data-Engineering-Guide.md');
+                if (!response.ok) throw new Error("Could not fetch the file");
+                const mdText = await response.text();
+
+                // Override Marked.js to intercept mermaid code blocks
+                const renderer = new marked.Renderer();
+                const originalCode = renderer.code.bind(renderer);
+                
+                renderer.code = function({text, lang, escaped}) {
+                    if (lang === 'mermaid') {
+                        return `<div class="mermaid">${text}</div>`;
+                    }
+                    return originalCode({text, lang, escaped});
+                };
+
+                marked.setOptions({ renderer: renderer });
+
+                // Render Markdown to HTML
+                document.getElementById('content').innerHTML = marked.parse(mdText);
+
+                // Render Mermaid diagrams
+                await mermaid.run();
+
+            } catch (error) {
+                document.getElementById('content').innerHTML = `
+                    <h3 style="color:red">Error loading Guide</h3>
+                    <p>${error.message}</p>
+                    <p><b>Note:</b> Because web browsers block local files from fetching other local files (CORS policy), simply double-clicking this HTML file won't work.</p>
+                    <p><b>Quick Fix:</b> Right-click this HTML file in VS Code and select <b>"Open with Live Server"</b>.</p>
+                `;
+            }
+        }
+
+        // Generate PDF using html2pdf
+        function generatePDF() {
+            const element = document.getElementById('content');
+            const opt = {
+                margin:       [0.5, 0.4], // [top, left]
+                filename:     'The_Databricks_Playbook.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+            
+            // Temporary style changes for better PDF rendering
+            document.body.style.backgroundColor = "white";
+            
+            html2pdf().set(opt).from(element).save().then(() => {
+                // Revert style changes
+                document.body.style.backgroundColor = "";
+            });
+        }
+
+        // Run when page loads
+        window.onload = renderMarkdown;
+    </script>
+</body>
+</html>
